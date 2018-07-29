@@ -1,4 +1,3 @@
-#![feature(extern_prelude)]
 extern crate chrono;
 extern crate quick_xml;
 
@@ -13,6 +12,8 @@ use std::io::prelude::*;
 use std::io::Cursor;
 use std::path::Path;
 use std::time::Duration as stdDuration;
+
+
 
 #[derive(Debug, Clone)]
 pub struct Point {
@@ -54,19 +55,26 @@ impl Track {
         sum
     }
 
-    pub fn to_xml(&self, autoseg: bool) {
+    pub fn to_xml(&self) {
         let mut writer = Writer::new_with_indent(Cursor::new(Vec::new()), 32, 4); //32 is space character
 
         let mut gpx_elem = BytesStart::owned(b"gpx".to_vec(), "gpx".len());
-        gpx_elem.push_attribute(("creator", "Pothole"));
-        assert!(writer.write_event(Event::Start(gpx_elem)).is_ok());
+        gpx_elem.push_attribute(("creator", "rust gps module"));
+        writer.write_event(Event::Start(gpx_elem)).unwrap();
 
         let trk_elem = BytesStart::owned(b"trk".to_vec(), "trk".len());
+        
+        let name_elem = BytesStart::owned(b"name".to_vec(), "name".len());
+        writer.write_event(Event::Start(name_elem)).unwrap();
+        writer.write(self.name.as_bytes()).unwrap();
+        writer.write_event(Event::End(BytesEnd::borrowed(b"name"))).unwrap();
+
         assert!(writer.write_event(Event::Start(trk_elem)).is_ok());
 
         let mut prev_point = &self.points[0];
 
         let trkseg_elem = BytesStart::owned(b"trkseg".to_vec(), "trkseg".len());
+        
         assert!(writer.write_event(Event::Start(trkseg_elem.clone())).is_ok());
 
         let mut ptnum = 0;
@@ -86,12 +94,24 @@ impl Track {
             }
 
 
-
             let mut pt_elem = BytesStart::owned(b"trkpt".to_vec(), "trkpt".len());
             pt_elem.push_attribute(("lat", pt.lat.to_string().as_str()));
             pt_elem.push_attribute(("lon", pt.long.to_string().as_str()));
-            pt_elem.push_attribute(("ele", pt.ele.to_string().as_str()));
             assert!(writer.write_event(Event::Start(pt_elem)).is_ok());
+
+            let ele_elem = BytesStart::owned(b"ele".to_vec(), "ele".len());
+            writer.write_event(Event::Start(ele_elem)).unwrap();
+            writer.write(pt.ele.to_string().as_bytes()).unwrap();
+            writer.write_event(Event::End(BytesEnd::borrowed(b"ele"))).unwrap();
+
+            let time_timem = BytesStart::owned(b"time".to_vec(), "time".len());
+            writer.write_event(Event::Start(time_timem)).unwrap();
+            writer.write(pt.time.format("%FT%H:%M:%S%.3fZ").to_string().as_bytes()).unwrap();
+            writer.write_event(Event::End(BytesEnd::borrowed(b"time"))).unwrap();
+
+
+            // pt_elem.push_attribute(("ele", pt.ele.to_string().as_str()));
+            // pt_elem.push_attribute(("time", pt.time.to_string().as_str()));
             assert!(
                 writer
                     .write_event(Event::End(BytesEnd::borrowed(b"trkpt")))
@@ -150,7 +170,7 @@ impl Track {
         }
     }
 
-    pub fn parse(&mut self) {
+    pub fn get_bad_points(&mut self) -> Track {
         // how far to average the track together
         let sample_distance = 0.1;
         // This is where a track is considered bad = min_speed_factor * your average over sample_distance
@@ -168,12 +188,11 @@ impl Track {
         };
 
         let mut bad_track = Track {
-            name: "bad".to_string(),
+            name: format!("{}_{}", self.name, "bad"),
             ..Default::default()
         };
 
         for pt in &self.points {
-            // i = i + 1; if i > 30 {break};
             fifo_track.points.push(pt.clone());
             analyzed_track.points.push(pt.clone());
             fifo_track.truncate_by_length(sample_distance);
@@ -183,7 +202,7 @@ impl Track {
                 // println!("Track seems bad @ Km {:.1} {:.2} Km/h", analyzed_track.len(), speed);
             }
         }
-        bad_track.to_xml(false);
+        bad_track
     }
 
     pub fn from_xml(&mut self, filename: String) {
@@ -251,19 +270,18 @@ impl Track {
                 }
                 Ok(Event::Eof) => break, // exits the loop when reaching end of file
                 Err(e) => panic!("Error at position {}: {:?}", reader.buffer_position(), e),
-                _ => (), // There are several other `Event`s we do not consider here
+                _ => (),
             }
 
             // if we don't keep a borrow elsewhere, we can clear the buffer to keep memory usage low
             buf.clear();
         }
-
         // println!("XML parse end.");
     }
 }
 
 fn dist(p1: &Point, p2: &Point) -> f64 {
-    let r = 6371.0;
+    let r = 6371.0; //earth rad in km
     let d_lat = (p1.lat - p2.lat).to_radians();
     let d_long = (p1.long - p2.long).to_radians();
     let a = (d_lat / 2.0).sin() * (d_lat / 2.0).sin()
@@ -279,13 +297,11 @@ fn write_bytes(bytes_to_write: Vec<u8>, filename: String) {
     let path = Path::new(filename.as_str());
     let display = path.display();
 
-    // Open a file in write-only mode, returns `io::Result<File>`
     let mut file = match File::create(&path) {
         Err(_why) => panic!("couldn't create {}", display),
         Ok(file) => file,
     };
 
-    // Write the `LOREM_IPSUM` string to `file`, returns `io::Result<()>`
     match file.write_all("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n".as_bytes()) {
         Err(_why) => panic!("couldn't write to {}", display),
         // Ok(_) => (println!("Wrote header -> {}", display)),
@@ -295,6 +311,6 @@ fn write_bytes(bytes_to_write: Vec<u8>, filename: String) {
     match file.write_all(&bytes_to_write) {
         Err(_why) => panic!("couldn't write to {}", display),
         Ok(_) => println!("Wrote xml:    {}", display),
-        Ok(_) => println!(),
+        // Ok(_) => println!(),
     }
 }

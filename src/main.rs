@@ -61,7 +61,7 @@ fn main() {
         println!("Seg duration: {:?} h", segment.time().num_minutes() as f32 / 60.0);
         println!("Seg speed:    {:?} Km/h", segment.speed());
         println!("Seg pts:      {}-{}", startpoint, endpoint);
-        segment.to_xml(false);
+        segment.to_xml();
 
     }
 
