@@ -13,12 +13,10 @@ pub use gps::Track;
 fn main() {
     let matches = App::new("Gpxtools")
         .arg(
-            Arg::with_name("track")
-                .long("track")
+            Arg::with_name("TRACK")
                 .required(true)
-                .value_name("FILE")
                 .help("GPX file to process")
-                .takes_value(true),
+                .index(1)
         )
         .arg(
             Arg::with_name("maxpoints")
@@ -29,7 +27,7 @@ fn main() {
         )
         .get_matches();
 
-    let trackfile = matches.value_of("track").unwrap_or("data/Day1-1.gpx");
+    let trackfile = matches.value_of("TRACK").unwrap_or("data/Day1-1.gpx");
     let maxpts: usize = matches.value_of("maxpoints").unwrap_or("3000").parse().unwrap();
 
     let mut trk = Track {
