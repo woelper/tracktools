@@ -7,7 +7,9 @@ os:
   - linux
   - osx
   - windows
+
 deploy:
+  verbose: true
   provider: pages
   skip_cleanup: true
   github_token: $GITHUB_TOKEN
