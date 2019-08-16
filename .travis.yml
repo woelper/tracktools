@@ -6,3 +6,11 @@ script:
 os:
   - linux
   - osx
+deploy:
+  provider: pages
+  skip_cleanup: true
+  github_token: $GITHUB_TOKEN
+  keep_history: true
+  local_dir: target/release
+  on:
+    branch: master
