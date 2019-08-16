@@ -3,10 +3,14 @@ rust: nightly
 cache: cargo
 script:
   - cargo build --release
+
 os:
   - linux
-  - osx
-  - windows
+#  - osx
+#  - windows
+
+before_deploy:
+  - cd $TRAVIS_BUILD_DIR
 
 deploy:
   verbose: true
