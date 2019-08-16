@@ -3,3 +3,6 @@ rust: nightly
 cache: cargo
 script:
   - cargo build --release
+os:
+  - linux
+  - osx
