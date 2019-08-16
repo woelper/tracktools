@@ -12,12 +12,20 @@ os:
 before_deploy:
   - cd $TRAVIS_BUILD_DIR
 
+# deploy:
+#   verbose: true
+#   provider: pages
+#   skip_cleanup: true
+#   github_token: $GITHUB_TOKEN
+#   keep_history: true
+#   #local_dir: target/release
+#   on:
+#     branch: master
+
 deploy:
-  verbose: true
-  provider: pages
+  provider: releases
+  api_key: $OAUTH
+  file: target/release/tracktools
   skip_cleanup: true
-  github_token: $GITHUB_TOKEN
-  keep_history: true
-  #local_dir: target/release
   on:
-    branch: master
+    tags: true
