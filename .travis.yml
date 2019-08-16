@@ -6,6 +6,7 @@ script:
 os:
   - linux
   - osx
+  - windows
 deploy:
   provider: pages
   skip_cleanup: true
